@@ -16,23 +16,6 @@ class Buoy:
         #==================
         self.initialize(h)
 
-    def initialize(self,h):
-
-        wndpath = 'c:/users/twhes/onedrive/documents/ob27shelfflow/ndbc41037/WindDatalpf.txt'
-
-        winddata = np.loadtxt(wndpath,dtype=object,delimiter=',')
-        wind = np.array(winddata[:,1:],dtype=float)[list(winddata[:,0]).index('2013.1.1.0'):,:]
-
-        flowpath = 'c:/users/twhes/onedrive/documents/ob27shelfflow/ob27currents/FilteredCurrentData_2013-2021.mat'
-        
-        from scipy.io import loadmat
-        flowdata = loadmat(flowpath)
-        csflow = flowdata['CrossShelf']
-        asflow = flowdata['AlongShelf']
-
-        self.wind = Wind(wind[:len(csflow[0]),0],wind[:len(csflow[0]),1])
-        self.currents = Currents(csflow,asflow)
-        self.depth = h
     
     def Model(self):
         """
