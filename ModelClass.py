@@ -42,8 +42,8 @@ class Simple:
         dz = h / (Nz-1)
         dz_ = np.zeros(Nz)
         idx= (Nz//2) + 1
-        dz_[:idx] = -np.log(np.linspace(1.3,4.4,idx))*dz
-        dz_[idx:] = -np.log(np.linspace(1.3,4.4,idx))[::-1][1:]*dz
+        dz_[:idx] = np.log(np.linspace(1.3,4.4,idx))*dz
+        dz_[idx:] = np.log(np.linspace(1.3,4.4,idx))[::-1][1:]*dz
         return dz_
             
     def makeAv(self,Nz,form):
@@ -135,10 +135,10 @@ class Simple:
         self.pass2fortran()
         # compile Fortran code
         print('Compiling...')
-        os.system('cmd/c "gfortran -o test math.f90 Ocean.f90 arrayin.f90 savearry.f90 setup.f90 simple.f90"')
+        os.system('cmd/c "gfortran -o model math.f90 Ocean.f90 arrayin.f90 savearry.f90 setup.f90 simple.f90"')
         start = time.time() # Start model run time
         print('Running Model...')
-        os.system('cmd/c "test"') # Execute 
+        os.system('cmd/c "model"') # Execute 
         end = time.time() # End model run time 
 
         runtime = (end-start)/60
