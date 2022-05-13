@@ -48,10 +48,8 @@ class EddyVisc:
                     linear_ext*Ekdepth when it lies between 
                     two.
         Called in:
-            -self.BilinearCutoff()       
-        Last Edited: 5/11/22
-            Changes: Wrote docstring. NEEDS PROOF OF CONCEPT
-        -TH"""  
+            -self.BilinearCutoff()"""  
+        
         ii = True
         z_idx = 0 # "depth" index
             
