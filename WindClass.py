@@ -130,4 +130,4 @@ class Wind(Vector2d):
 
         else:
 
-            return Vector2d(j,i)
+            return Vector2d(i,j)
