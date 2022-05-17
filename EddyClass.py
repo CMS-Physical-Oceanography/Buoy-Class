@@ -1,15 +1,14 @@
 import numpy as np
 from Coriolis import coriolis 
 """
-Contains:
-    -class: EddyVisc(dz)
 ===========================================================
-                     REFERENCES
-[1] S. J. Lentz,"Sensitivity of the Inner-Shelf Circulation 
-                 to the Form of Eddy Viscosity Profile", 
-                 Journal of Physical Oceanography, 
-                 Vol. 25 (1993) pp. 19-28
+-                     REFERENCES
+-[1] S. J. Lentz,"Sensitivity of the Inner-Shelf Circulation 
+-                 to the Form of Eddy Viscosity Profile", 
+-                 Journal of Physical Oceanography, 
+-                 Vol. 25 (1993) pp. 19-28
 ==========================================================="""
+
 class EddyVisc:
     """This class calculates various forms of Eddy Viscosity 
     for use in the finite difference scheme in class: Model.
@@ -26,11 +25,15 @@ class EddyVisc:
     Last Edited: 5/11/22
         Changes: wrote docstring
     -TH"""
+
     def __init__(self):
+        
         self.dz = []
         self.Av = []
+
     def get_depth(EkDepth,linear_ext):
-        """This function calculates the index of the
+        """
+        This function calculates the index of the
         vertical gridpoint where the discritization 
         is equivalent to a percentage: linear_ext of 
         the turbulant boundary layer: EkDepth. NOTE Used 
@@ -48,8 +51,8 @@ class EddyVisc:
                     linear_ext*Ekdepth when it lies between 
                     two.
         Called in:
-            -self.BilinearCutoff()"""  
-        
+            -self.BilinearCutoff()"""
+
         ii = True
         z_idx = 0 # "depth" index
             
@@ -117,20 +120,20 @@ class EddyVisc:
         of that value."""
         return np.array(len(self.dz)*[value])
 
-        def eddylist(idx):
-            """
-            This function inputs an integer 
-            idx corrosponding the the form of 
-            eddy viscosity in viscdict ={} 
-            defined in the makevisc() method 
-            in class: Simple (ModelClass.py).
-            OUTPUTS:
-                -Av = form of eddy viscosity 
-                    corospoinding to idx in
-                    viscdict."""
+    def eddylist(idx):
+        """
+        This function inputs an integer 
+        idx corrosponding the the form of 
+        eddy viscosity in viscdict ={} 
+        defined in the makevisc() method 
+        in class: Simple (ModelClass.py).
+        OUTPUTS:
+            -Av = form of eddy viscosity 
+                  corospoinding to idx in
+                  viscdict."""
 
 
-            profiles = {'bilincut':0,'Constant:':1}
-            visclist = [self.BilinearCutoff,
-                        self.Constant]
-            return visclist[idx]
+        profiles = {'bilincut':0,'Constant:':1}
+        visclist = [self.BilinearCutoff,
+                    self.Constant]
+        return visclist[idx]

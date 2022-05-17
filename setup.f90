@@ -69,9 +69,9 @@ module setup
         allocate(pg(Nz,size(uda))) ! allocate memory for pg
 
         do i = 1,size(uda) ! wrap into complex vectors
-            pg(:,i) = complex(-vda(i),uda(i))
+            pg(:,i) = complex(-1*vda(i),uda(i))
         end do
-        pg = pg * coriolis(lat) ! scale by coriolis parameter
+        pg(:,:) = pg(:,:) * coriolis(lat) ! scale by coriolis parameter
         deallocate(uda)
         deallocate(vda)
     end subroutine PressureGradient

@@ -1,222 +1,163 @@
 import numpy as np
 
+"""
+Contains:
+    -class: Vector2d
+    -class: VectorPlots"""
+
 class Vector2d:
     """
-    Vector2d class functions are build assuming the i component is 
-    the horizontal component in cartesian coords and the radial 
-    component in polar coords.  Likewise j represents vertical and 
-    angular components. Components can be changed with the 
-    flipflop(self) class function. Angles are assumed to be taken 
-    clockwise from the positive y-axis for dealing with ocean and 
-    meteorlogical data
-================================================================================"""       
+    DESCRIPTION:
+    This class holds vector components self.i and self.j as
+    1d numpy arrays and contains methods for basic rotations 
+    and operations. Vector2d is the parent class of Wind(), 
+    Waves(), and Currents().
+    NOTE 
+    -   ALL FUNCTIONS TAKE ANGLES TO BE REPORTED AS THE ANGLE 
+    -   CLOCKWISE FROM THE POSITIVE Y-AXIS IN DEGREES FOR 
+    -   WORKING WITH METEROLOGICAL DATA. 
+    -       theta
+    -       |^ /
+    -    y  | /
+    -       |/_________ x
+    NOTE
+    ATTRIBUTES:
+        -self.i = cartesian x component or polar radial component
+        -
+        -self.j = cartesian y component or polar angular component
+    METHODS:
+        -Re-Assigns attribute values: self.rot_angles(theta), self.invert()
+        -
+        -Returns Vector2d objects: self.adjust(), self.mag(), self.polar2cart(),
+        -                          self.cart2polar(), self.polar_rot(theta) 
+    IMPROVEMENTS:
+    It might be useful to be able to choose between degrees and radians and  which 
+    axis angles are taken from.
+    ============================================================================"""       
     
     def __init__(self,i,j):
-        self.i = i
-        self.j = j
-        
-    """=============================================================================
-                                                                           """
+        self.i = np.array(i)
+        self.j = np.array(j)
+
+    def adjust(self):
+        """
+        This function adds 360 degrees to 
+        negative angles to keep values in 
+        [0,360]. This is called consistently
+        in Vector2d and should be made optional
+        in the future.
+        INPUTS:
+            -self
+        REASSIGNS:
+            -self"""
+
+        angles = self.j
+        angles[angles<0] += 360 # 360 degrees
+
+        return angles        
+
+    def rot_angles(self,theta,cart=False):
+        """
+        NOTE Changes the value of self.j in Vector2d object its called with.
+
+        This function rotates the angular component of a Vector2d in polar 
+        coordinates (self.i=radial,self.j=angular) into a new coordinate 
+        system where NOTE the positive y-axis is rotated clockwise theta degrees.
+        INPUTS:
+            -self with self.j in degrees or the vertical Cartesian component.
+        REASSIGNS:
+            -self.j = self.j-theta"""  
+        if cart==False:
+            self.j = self.j - theta # degrees
+            self.j = self.adjust()
+        elif cart == True:
+            r_0 = np.sqrt(self.i**2 + self.j**2) # calculates radial comp
+            theta_0 = np.arctan2(self.i,self.j) # calculates angle from the positive y
+            theta_f = theta_0 - np.deg2rad(theta)
+
+            # find new cartesian components
+            self.i = r_0 * np.sin(theta_f)
+            self.j = r_0 * np.cos(theta_f) 
     
-    def polar2cart(self,zero_axis ='y',return_vector=False):
+    def invert(self,cart=False):
+        """
+        NOTE Changes the value of self.j in Vector2d object its called with.
+
+        Subtracts 180 degrees from the current value of self.j to invert the 
+        direction. Used to rotate wind and wave data reported in 
+        direction of origin to direction of motion.
+        INPUTS:
+            -self
+        REASSIGNS:
+            -self.j"""                                                           
+  
+        self.rot_angles(180,cart)
+
+    def mag(self):
+        """
+        This function returns the magnitude of 
+        (self.i,self.j) where components are in 
+        Cartesian coordiantes.
+        INPUTS:
+            -self
+        RETURNS:
+            -magnitude of self"""
+
+        return np.sqrt(self.i**2+self.j**2)
+
+    def polar2cart(self):
+        """
+        This function converts polar corrdinates 
+        with radial and angular components i=r,j=theta
+        into Cartesian coordiates i=x,j=y.
+        INPUTS:
+            -self
+        RETURNS:
+            -Vector2d object of self in Cartesian coordinates."""
 
         rad = np.deg2rad(self.j)
+        i  = np.sin(rad)*self.i
+        j  = np.cos(rad)*self.i
         
-        if return_vector == False:
+        return Vector2d(i,j)
 
-            if zero_axis == 'y':
-
-                i = np.array(list(map(lambda x,y: x*y,np.sin(rad),self.i)))
-                self.j = np.array(list(map(lambda x,y: x*y,np.cos(rad),self.i)))
-                self.i = i
-
-            elif zero_axis == 'x':
-                
-                i = np.array(list(map(lambda x,y: x*y,np.cos(rad),self.i)))
-                self.j = np.array(list(map(lambda x,y: x*y,np.sin(rad),self.i)))
-                self.i = i
-
-            else:
-
-                print('invalid zero_axis input')
-                
-        elif return_vector == True:
-         
-
-            
-            i  = np.array(list(map(lambda x,y: x*y,np.cos(rad),self.i)))
-            j  = np.array(list(map(lambda x,y: x*y,np.sin(rad),self.i)))
-            
-            if zero_axis == 'y':
-                            
-                return(Vector2d(j,i))
-                
-            elif zero_axis == 'x':
-                
-                return(Vector2d(i,j))
-
-            else:
-
-                print('invalid input to zero_axis')
-                
-        else:
-
-            print('invalid input for return_vector')
-            
-
-            
+    def cart2polar(self): 
         """
-================================================================================
-                                                                              """
-
-    def timeslice(self,num = 1,period = 'year',segment=True):
-        lengths = {'year':(24*365),'month':(24*30),'day':23,'all':len(self.i)}
-        slice_ = (lengths[period]*num)-1
+        This function converts Cartesian coordiantes
+        with components i=horizontal,j=vertical into 
+        polar components i=radial,j=angular.
+        INPUTS:
+            -self
+        RETURNS:
+            -Vector2d object of self in polar coordinates."""
         
-        if segment == True:
-            self.i = self.i[slice_-lengths[period]:slic_]
-            self.j = self.j[slice_-lengths[period]:slice_]
-        else:
-            self.i = self.i[slice_-lengths[period]:-1]
-            self.j = self.j[slice_-lengths[period]:-1]
-
-        
-        """
-
-=================================================================================
-                                                                              """
-            
-    def cart2polar(self):
-        # arctan2() takes the quadrant into account 
-        # https://numpy.org/doc/stable/reference/generated/numpy.arctan2.html
-        def adjust(angle):
-            # Adjusts for negative values
-
-            if angle < 0 :
-                return angle + np.pi*2
-            else:
-                return angle 
-        r = np.array(list(map(lambda x,y : np.sqrt(x**2+y**2),self.i,self.j)))
-        theta = np.array(list(map(adjust,np.arctan2(self.j,self.i))))
+        r = self.mag()
+        self.j = np.arctan2(self.i,self.j)
+        theta = self.adjust()
 
         return Vector2d(r,theta)
 
-    
-    """
-=================================================================================
-                                                                                """      
-    def mag(self):
-        return np.sqrt(self.i**2+self.j**2)
-    
-    """
-=================================================================================
-                                                                               """
-
-    def invert(self,units='deg'):
+    def polar_rot(self,theta):
         """
-    Maps a set of angles 180 degrees or pi radians from the current plane.
-    Useful for directions that describe where something originates such as 
-    wind direction.
-                                                                       """
-        def adjust(angle):
-            # Adjusts for negative values
+        Maps polar coordinates speed and direction to a new
+        coordinate system with the previous positive y-axis 
+        NOTE rotated theta degrees in the clockwise direction.
+        INPUTS:
+            -self with components in POLAR COORDINATES as i = r 
+             and j = theta.
+            -theta = Angle of rotation in degrees taken clockwise from the current.
+        RETURNS:
+            -Vector2d object in Cartesian coordinates with the rotated components."""
 
-            if angle < 0 :
-                return angle + 360
-            else:
-                return angle                                                                      
+        # maps to the new axis
         
-        if units == 'deg':
-            a  = np.array(list(map(lambda x: x-180,self.j)))
-            self.j = np.array(list(map(adjust,a)))
-        elif units == 'rad':
-            a = np.array(list(map(lambda x: x-np.pi,self.j)))
-            self.j = np.array(list(map(adjust,a)))
-        else:
-            print('INVALID UNITS: keyword units can be either','\n'
-           'deg or rad for degrees or radian')
-   
-        """
-================================================================================
-                                                                      """       
-    
-    def adjust(angle):
-        # Adjusts for negative values
-        if angle < 0 :
-            return angle + 360
-        else:
-            return angle
-
-                              
-        """
-================================================================================
-                                                                              """              
-
-    def rot_angles(self,theta):
-        """
-    Maps an angle of value {0,360} in degrees from a cardinal
-    plane with N = 0 deg theta degrees clockwise of the
-    North axis.
-    
-    Theta is the clockwise angle between the North axis
-    (0 deg) and the new positive y axis in degrees
-    
-                                                    """    
-        def adjust(angle):
-            # Adjusts for negative values
-
-            if angle < 0 :
-                return angle + 360
-            else:
-                return angle
-
-        #maps to the new plane 
-        new_dir = np.array(list(map(lambda x: x-theta,self.j)))
-        new_dir = np.array(list(map(adjust,new_dir)))
-
-        self.j = new_dir
-
-                              
-        """
-================================================================================
-
-                                                                              """       
-
-    def polar_rot(self,theta,deg = True):
-        """
-    Maps polar coordinates speed and direction {0,360}
-    in degrees from a cardinal plane with North = 0 deg to a
-    coordinate system with the positive y axis theta degrees
-    clockwise from the North axis.
-    
-    Returns cartesian u and v components of the radial speed.  
-    
-    Theta is the clockwise angle between the North axis
-    (0 deg) and the new positive y axis in degrees
-    
-                                                   """
-       
-        
-        def adjust(angle):
-            # Adjusts for negative values
-
-            if angle < 0 :
-                return angle + 360
-            else:
-                return angle
-
+        new_traj =self.j - theta
+        new_traj = np.deg2rad(new_traj)
             
-        # maps to the new plane 
-        new_traj -= theta
-        new_traj = np.array(list(map(adjust,new_traj)))
-
-
-        # checks if units are in degrees
-        if deg == True: 
-            new_traj = np.deg2rad(new_traj)
-            
-        # calculates the u and v components
-        u = np.sin(new_traj)*self.i
-        v = np.cos(new_traj)*self.i
+        # calculates the i and j components
+        i = np.sin(new_traj)*self.i
+        j = np.cos(new_traj)*self.i
                      
-        return Vector2d(u,v)
+        return Vector2d(i,j)
+    
+

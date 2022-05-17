@@ -14,6 +14,8 @@ class py2fort:
         -Av2fortran()
         -scale2fortran()
         -data2fortran()"""
+
+    
     def dz2fortran(dz_):
 
         DZ = pd.DataFrame(dz_)
@@ -44,10 +46,6 @@ class py2fort:
         # avoids errors in Fortran
         dt[list(map(lambda i : max(Av[:,i]==0),range(len(Av[0]))))] = 0
 
-        # dt = np.zeros((Nz,lendata)) # initialize output as Nz x lendata arr
-        # for i in range(lendata):
-        #     dt[:,i] = dt_[i]
-
         # Save dt
         DT = pd.DataFrame(dt)
         DT.to_csv('dt.dat',header=False,index=False)
@@ -59,6 +57,7 @@ class py2fort:
         wndscale[1:] = wndscale_/wndscale_[-1]
         WSC = pd.DataFrame(wndscale)
         WSC.to_csv('scale.dat',header=False,index=False)
+
     def Av2fortran(Av_):
 
         """
@@ -106,4 +105,62 @@ class py2fort:
         V = pd.DataFrame(v_)
 
         U.to_csv(ufil,header=False,index=False)
-        V.to_csv(vfil,header=False,index=False)   
+        V.to_csv(vfil,header=False,index=False)
+
+    def setup(simple):
+        """
+        This function inputs a Simple class object and passes
+        its attruibutes to Fortran by saving them as .dat
+        files."""
+
+        print('Passing run info to Fortran...')
+        # Pass verticle discritization
+        py2fort.dz2fortran(simple.dz)
+        # Pass time steps 
+        py2fort.dt2fortran(simple.Av,simple.depth)
+        # Pass Wind Stress log scale 
+        py2fort.scale2fortran(simple.Nt)
+        # pass Av 
+        py2fort.Av2fortran(simple.Av)
+        # pass wind stress data
+        py2fort.data2fortran(simple.WS.i,simple.WS.j,
+                                'csws.dat','asws.dat')
+        # pass depth-average flow data
+        py2fort.data2fortran(simple.PG.i,simple.PG.j,
+                                'uda.dat','vda.dat')
+
+class runfort:
+    """
+    This class contains functions used to run the
+    Fortran model in Python."""
+
+    
+    def execute():
+
+        from os import system
+        from time import time
+
+        # compile/run Fortran code and get run info
+        print('Compiling...')
+        system('cmd/c "gfortran -o test math.f90 Ocean.f90 arrayin.f90 savearry.f90 setup.f90 simple.f90"')
+        start = time() # Start model run time
+        print('Running Model...')
+        system('cmd/c "test"') # Execute 
+        end = time() # End model run time 
+        runtime = (end-start)/60
+        print('RUNTIME:',runtime,'minutes')
+        return runtime
+
+
+    def clear():
+        """
+        This function deletes the data files passed to 
+        Fortran in setup()."""
+        
+        from os import remove
+
+        files = ['dz.dat','dt.dat','scale.dat','csws.dat','asws.dat','uda.dat','vda.dat']
+        print('Clearing Inputs...')
+        for fil in files:
+            remove(fil)
+        

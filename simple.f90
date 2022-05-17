@@ -30,30 +30,31 @@ program simple
 
     W(:,:) = complex(0,0)
 
-    dt(:,:) = 7
+    dt(:,:) = 12
     print*, 'Crunching Numbers...'
     do t = 1,size(logscale) ! loop through time
         W_copy = W
         wndstress = ws*logscale(t)
 
-        W(0,:) = W_copy(0,:) + dt(0,:)*PG(0,:) & ! Pressure Gradient
-        - j*dt(0,:)*coriolis(lat)*W_copy(0,:)  & ! Coriolis Term
-        + ((dt(0,:)*Av(0,:))/(dz(0,:)**2))    &
-        *(2*W_copy(1,:) - 2*W_copy(0,:) + ((2*dz(0,:)*wndstress)/(swdens*Av(0,:)))) &
-        +(dt(0,:)/(dz(0,:)**2))*(W_copy(0,:)-W_copy(1,:))*(Av(0,:)-Av(1,:)) 
-
-        W(2:size(W(:,0))-1,:) = W_copy(2:size(W(:,0))-1,:) + dt(2:size(W(:,0))-1,:)*PG(2:size(W(:,0))-1,:) & 
-        - j*dt(2:size(W(:,0))-1,:)*coriolis(lat)*W_copy(2:size(W(:,0))-1,:) & ! Coriolis Term
-        + ((dt(2:size(W(:,0))-1,:)*Av(2:size(W(:,0))-1,:))/(dz(2:size(W(:,0))-1,:)**2))  &
-        *(W_copy(1:size(W(:,0))-2,:) - 2*W_copy(2:size(W(:,0))-1,:) + W_copy(3:,:)) &
-        +(dt(2:size(W(:,0))-1,:)/(dz(2:size(W(:,0))-1,:)**2)) &
-        *(W_copy(2:size(W(:,0))-1,:)-W_copy(3:,:))*(Av(2:size(W(:,0))-1,:)-Av(3:,:)) 
+        W(1,:) = W_copy(1,:) + dt(1,:)*PG(1,:) & ! Pressure Gradient
+        - j*dt(1,:)*coriolis(lat)*W_copy(1,:)  & ! Coriolis Term
+        + ((dt(1,:)*Av(1,:))/(dz(1,:)**2))     &
+        *(2*W_copy(2,:) - 2*W_copy(1,:) + ((2*dz(1,:)*wndstress)/(swdens*Av(1,:)))) &
+        +(dt(1,:)/(dz(1,:)**2))*(W_copy(1,:)-W_copy(2,:))*(Av(1,:)-Av(2,:)) 
+        !size(W(:,1))
+        W(2:Nz-1,:) = W_copy(2:Nz-1,:) + dt(2:Nz-1,:)*PG(2:Nz-1,:) & 
+        - j*dt(2:Nz-1,:)*coriolis(lat)*W_copy(2:Nz-1,:) & ! Coriolis Term
+        + ((dt(2:Nz-1,:)*Av(2:Nz-1,:))/(dz(2:Nz-1,:)**2))  &
+        *(W_copy(1:Nz-2,:) - 2*W_copy(2:Nz-1,:) + W_copy(3:,:)) &
+        +(dt(2:Nz-1,:)/(dz(2:Nz-1,:)**2)) &
+        *(W_copy(2:Nz-1,:)-W_copy(3:,:))*(Av(2:Nz-1,:)-Av(3:,:)) 
     end do
+    print*,coriolis(lat)
     print*,'N time-steps=',size(logscale)
     print*,'Saving...'
     
-    call saveNdreal(real(W),'CSflow.bin',Nz,lendata)
-    call saveNdreal(aimag(W),'ASflow.bin',Nz,lendata)
+    call saveNdreal(real(W),'CSflow.bin',Nz)
+    call saveNdreal(aimag(W),'ASflow.bin',Nz)
 
     deallocate(logscale)
     deallocate(dz)

@@ -1,49 +1,57 @@
 import numpy as np
-import pandas as pd 
+import pandas as pd
 from EddyClass import EddyVisc
-from Coriolis import coriolis
-class Simple:
 
-    def __init__(self,h,PG,WS):
+class Simple(EddyVisc):
+
+    def __init__(self,depth,lat,WS,PG):
+        super().__init__()
         # discritization
-        self.dz = []
-        self.Nt = 10000 # number of time-steps
-        # Eddy Viscosity
-        self.visc = EddyVisc() # Viscosity class
-        self.Av = [] # array sent to Fortran
+        self.Nt = None# number of time-steps
         # Data
-        self.WndStrs = WS
-        self.PresGrad = PG
-        self.depth = h
+        self.WS = WS
+        self.PG = PG
+        self.depth = depth
+        self.lat = lat
         # Make sure data arrays are the same size
         self.check = self.datacheck()
+
     def datacheck(self):
-        if len(self.WndStrs.i) == len(self.PresGrad.i):
-            return 0 
+        if len(self.WS.i) == len(self.PG.i):
+            return True
         else:
-            print('len(PresGrad)!=len(WndStrs)')
-            return 1
+            print('len(PG)!=len(WndStrs)')
+            return False
+
     def makegrid(self,h,Nz,logscl=True):
-        """This function creates a 1D spatial discritization 
+        """
+        This function creates a 1D spatial discritization 
         with depth using a logarithmic spacing away from the 
         boundaries if logscl=True. The finite difference scheme 
         doesnt always preform well with fine spatial discritization. 
+        
         NOTE If a higher resolution is desired, the time-step, dt, 
         will need to be small and the model will take longer to reach a 
         steady state.
         INPUTS:
             -Nz = Number of vertical grid-points.
             -(logscl=True) = If true a logrithmic discritization 
-                            will be assigned. If False dz will be 
-                            depth uniform.
-        REASSIGNS:
+            -               will be assigned. If False dz will be 
+            -               depth uniform.
+        RETURNS:
             -self.dz = Vertical discritization.
             """
         dz = h / (Nz-1)
         dz_ = np.zeros(Nz)
         idx= (Nz//2) + 1
-        dz_[:idx] = np.log(np.linspace(1.3,4.4,idx))*dz
-        dz_[idx:] = np.log(np.linspace(1.3,4.4,idx))[::-1][1:]*dz
+        # dz_ = np.log(np.linspace(2.5,3.2,int(Nz)))*dz
+
+        # dz_[:idx] = np.log(np.linspace(1.3,4.4,idx))*dz
+        # dz_[idx:] = np.log(np.linspace(1.3,4.4,idx))[::-1][1:]*dz
+
+        dz_[:idx] = np.log(np.linspace(2.5,3.2,idx))*dz
+        dz_[idx:] = np.log(np.linspace(2.5,3.2,idx))[::-1][1:]*dz
+        
         return dz_
             
     def makeAv(self,Nz,form):
@@ -56,22 +64,21 @@ class Simple:
         THIS NEEDS TO BE CHANGED TO ASSIGN A FORM
         OF AV BASED ON THE INPUT: form.
         self.WndStrs.mag() for shear velocity dependent 
-        forms of Av.
-        -TH"""
+        forms of Av."""
+
         # check if PG and WS are the same length
-        if self.check == 0:
+        if self.check == True:
             eddydict = {'bilincut':0,'const':1}
             self.dz = self.makegrid(self.depth,Nz)
             idx = eddydict[form]
-            self.visc.dz = self.dz
-            lendata = len(self.WndStrs.i)
-            Av = np.zeros((Nz,lendata))
+            lendata = len(self.WS.i)
+            self.Av = np.zeros((Nz,lendata))
             for i in range(lendata):
-                Av[:,i] = self.visc.Constant(.005)
-            self.Av = Av # assign Av
+                self.Av[:,i] = self.Constant(.005)
         else:
-            print('len(PresGrad)!=len(WndStrs)')
+            print('len(PG)!=len(WS)')
             return False 
+            
     def tuneup(self,params):
         """
         This function will allow the user to tune the 
@@ -85,8 +92,7 @@ class Simple:
               use the Python code over Fortran to reduce the 
               setup speed assuming the input arrays are small.
               This will reassign the model parameters to the 
-              inputted params with each call.
-        -TH"""
+              inputted params with each call."""
         pass
         
     def pass2fortran(self):
@@ -94,56 +100,62 @@ class Simple:
         This funciton passes class: Simple 
         attributes to Fortran. Data is read using 
         the setup.f90 module which uses fucntions
-        from arryin.f90.
-        -TH"""
+        from arryin.f90."""
 
         from ModelHelp import py2fort
-        # Pass verticle discritization
-        py2fort.dz2fortran(self.dz)
-        # Pass time steps 
-        py2fort.dt2fortran(self.Av,self.depth)
-        # Pass Wind Stress log scale 
-        py2fort.scale2fortran(self.Nt)
-        # pass Av 
-        py2fort.Av2fortran(self.Av)
-        # pass wind stress data
-        py2fort.data2fortran(self.WndStrs.i,self.WndStrs.j,
-                                'csws.dat','asws.dat')
-        # pass depth-average flow data
-        py2fort.data2fortran(self.PresGrad.i,self.PresGrad.j,
-                                'uda.dat','vda.dat')
+        py2fort.setup(self)
+                 
+
+    def clear_inputs(self,clean=True):
+        from ModelHelp import runfort
+        if clean == True:
+            runfort.clear()
+        else:
+            pass
+
     def results(self):
         """
         This function will read the model results from 
-        Fortran binary and do something with them.
-        -TH"""
-        pass
+        Fortran binary and do something with them."""
+        from CurrentClass import Currents 
 
-    def CRUNCH(self):
-        """This function compiles and executes the 
+        def replace_nans(arr):
+            """
+            when passed to Fortran nans are 
+            replaced with 0. This replaces nans."""
+
+            for col in range(len(arr[0])):
+                if np.all(arr[:,col]==0):
+                    arr[:,col] = np.nan
+            return arr
+
+        csflow = replace_nans(np.loadtxt('CSflow.bin'))
+        asflow = replace_nans(np.loadtxt('ASflow.bin'))
+        
+        return Currents(csflow,asflow)
+
+    def run_model(self):
+        """
+        This function runs the Fortran code by calling 
+        runfort.execute() and returns a run-info tuple."""
+
+        from ModelHelp import runfort
+        runtime = runfort.execute() # compile/run Fortran code
+
+        # return (Nt,Nz,len(data),runtime)
+        return (self.Nt,len(self.dz),len(self.WS.i),runtime)
+
+    def CRUNCH(self,clean=True):
+        """
+        This function compiles and executes the 
         Fortran90 files for the finite difference,
         and Stokes Drift profiles(soon as of 5/11/22).
        
         All discritization and data values must be assigned
-        prior to calling CRUNCH().
-        -TH"""
-        import os
-        import time 
+        prior to calling CRUNCH()."""
 
-        # Save Params and Data
-        print('Passing run info to Fortran...')
-        self.pass2fortran()
-        # compile Fortran code
-        print('Compiling...')
-        os.system('cmd/c "gfortran -o model math.f90 Ocean.f90 arrayin.f90 savearry.f90 setup.f90 simple.f90"')
-        start = time.time() # Start model run time
-        print('Running Model...')
-        os.system('cmd/c "model"') # Execute 
-        end = time.time() # End model run time 
-
-        runtime = (end-start)/60
-        print('RUNTIME:',runtime,'minutes')
-
-        self.results() # currently does nothing 
-        # return runtime info
-        return [self.Nt,len(self.dz),len(self.WndStrs.i),runtime]
+        self.pass2fortran() # pass info to Fortran
+        runinfo = self.run_model()
+        self.clear_inputs(clean) # clear inputted data and params
+        print('Done.')
+        return self.results(),runinfo
