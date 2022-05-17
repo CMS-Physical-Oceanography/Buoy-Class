@@ -1,4 +1,6 @@
 module arrayin
+    ! This module contains functions for reading in data files from 
+    ! ModelClass.py. Some are pretty specific and should be generalized.
     implicit none
     contains
     ! ===============================================================
@@ -16,8 +18,7 @@ module arrayin
         ! INPUT = [[Nrows,Ncols],
         !          [real(0,0) ......... real(0,Ncols)],
         !          [real(Nrows,0)..real(Nrows,Ncols)]]
-        ! THIS WILL THROW AND ERROR IF MEMORY FOR DATA_ IS
-        ! DEALLOCATED IN FUNCTION.
+
         implicit none
         !                  VARIABLES
         character(99),intent(in) :: fil ! input file name
