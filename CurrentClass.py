@@ -1,5 +1,5 @@
 import numpy as np
-from VectorClass import Vector2d
+from .OceanBase import Vector2d
 
 class Currents(Vector2d):
     """
@@ -32,7 +32,7 @@ class Currents(Vector2d):
     Add a third flow dimension w. Allow current values to vary across two
     dimensions of space.
     ============================================================================"""
-    def __init__(self,i,j,depth=None):
+    def __init__(self,i=None,j=None,depth=None):
         super().__init__(i,j)
         self.depth = depth
     
