@@ -1,4 +1,2 @@
-# BuoyClass
-
-
-Coming soon as of 5/12/22
+pybuoy- Classes for working with wind, wave, and ADCP data. Classes Wind, Waves, and Currents can be used independently or through class Buoy. Wind, Waves, and                 Currents are child classes of Vector2d which assumes that directions are expressed as the clockwise angle from the positive y-axis. Buoy interits binning 
+        functions from class Bins in BinClass.py. Pybuoy also has a webscraper for accesing historical NOAA NDBC data in ClassNDBC.py.  
