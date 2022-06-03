@@ -58,7 +58,7 @@ class Simple(EddyVisc):
         
         return dz_
             
-    def makeAv(self,Nz,form):
+    def makeAv(self,Nz,form,args=None):
         """
         This function calls
         Maybe define a lambda function for
@@ -72,17 +72,18 @@ class Simple(EddyVisc):
 
         # check if PG and WS are the same length
         if self.check == True:
-            eddydict = {'bilincut':0,'const':1}
+            eddydict = {'bilincut':self.bilinear_cutoff,'const':self.constant}
             self.dz = self.makegrid(self.depth,Nz)
             idx = eddydict[form]
             lendata = len(self.WS.i)
             self.Av = np.zeros((Nz,lendata))
-            for i in range(lendata):
-                self.Av[:,i] = self.Constant(.005)
-        else:
-            print('len(PG)!=len(WS)')
-            return False 
-            
+                
+            try:
+                self.Av = eddydict[form](args)
+            except KeyError:
+                print('Invalid form of Av. Valid forms include ' + str(list(eddydict.keys())))
+             
+             
     def tuneup(self,params):
         """
         This function will allow the user to tune the 
@@ -159,7 +160,7 @@ class Simple(EddyVisc):
         prior to calling CRUNCH()."""
 
         trace = os.getcwd()
-        os.chdir('models')
+        os.chdir('simple')
 
         self.pass2fortran() # pass info to Fortran
         runinfo = self.run_model()

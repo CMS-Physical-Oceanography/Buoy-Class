@@ -142,10 +142,10 @@ class runfort:
 
         # compile/run Fortran code and get run info
         print('Compiling...')
-        os.system('cmd/c "gfortran -o test math.f90 Ocean.f90 arrayin.f90 savearry.f90 setup.f90 simple.f90"')
+        os.system("gfortran -o simple_model math.f90 Ocean.f90 arrayin.f90 savearry.f90 setup.f90 simple.f90")
         start = time() # Start model run time
         print('Running Model...')
-        os.system('cmd/c "test"') # Execute
+        os.system("./simple_model") # Execute
         end = time() # End model run time 
         runtime = (end-start)/60
         print('RUNTIME:',runtime,'minutes')
