@@ -133,10 +133,11 @@ class Simple(EddyVisc):
                 if np.all(arr[:,col]==0):
                     arr[:,col] = np.nan
             return arr
-
+        trace = os.getcwd()
+        os.chdir('/simple')
         csflow = replace_nans(np.loadtxt('CSflow.bin'))
         asflow = replace_nans(np.loadtxt('ASflow.bin'))
-        
+        os.chdir(trace)
         return csflow,asflow
 
     def run_model(self):

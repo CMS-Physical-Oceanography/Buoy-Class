@@ -31,7 +31,7 @@ class EddyVisc:
         self.dz = []
         self.Av = []
 
-    def get_depth(EkDepth,linear_ext):
+    def get_depth(self,EkDepth,linear_ext=.1):
         """
         This function calculates the index of the
         vertical gridpoint where the discritization 
@@ -55,15 +55,14 @@ class EddyVisc:
 
         ii = True
         z_idx = 0 # "depth" index
-            
         while ii: # while ii == True:
                   # ii = True if the sum of dz[0] through  
                   # dz[z_idx] is less than (linear_ext*EkDepth).
-            ii = abs(np.sum(self.dz[:z_idx])) < abs(linear_ext*EkDepth)
+            ii = abs(np.sum(self.dz[:z_idx],axis=0)) < abs(linear_ext*EkDepth)
             z_idx += 1 # iterate
         return z_idx
 
-    def BilinearCutoff(self,topstress,botstress,d=.1,Sr=.01,Br=.01):
+    def bilinear_cutoff(self,arg_tuple,d=.1,Sr=.01,Br=.01,swdens=1023):
         """This function creates a vertical bilinar cutoff eddy 
         viscosity profile as discussed [1]. NOTE The profile is linear with
         respect to topstress and botstress and extends this way through
@@ -85,40 +84,49 @@ class EddyVisc:
             -self. Av = A 1xNz array containing the bilinear cutoff form of Av
         Last Edited: 5/11/22
         -TH"""
+        
         # Lambda: EkmanScale() calculates the turbulant boundary layer scale 
+        topstress,botstress,lat = arg_tuple
+        
         EkmanScale = lambda stress : (0.4*np.sqrt(stress/swdens))/coriolis(lat)
     
-        Av = np.zeros_like(self.dz) # initialize Av
+        Av = np.zeros((len(self.dz),len(topstress))) # initialize Av
 
         Dtop = EkmanScale(topstress) # Surface Ekman Scale
         Dbot = EkmanScale(botstress) # Bottom Ekman Scale
+            
+        i=0
+        while i < len(Dtop):
+            Dtop_idx = self.get_depth(Dtop[i]) # find max linear index
+            Dbot_idx = self.get_depth(Dbot[i]) # same as above
 
-        Dtop_idx = get_depth(Dtop,self.dz) # find max linear index
-        Dbot_idx = get_depth(Dbot,self.dz) # same as above
+            # z = array containing depth values, in the units of the
+            # water column, for  each gridpoint where Av is linearly 
+            # increasing/decreasing.
+            z = np.linspace(Sr,.1*Dtop[i],Dtop_idx)
 
-        # z = array containing depth values, in the units of the
-        # water column, for  each gridpoint where Av is linearly 
-        # increasing/decreasing.
-        z = np.linspace(Sr,.1*Dtop,Dtop_idx)
+            # Assign linear values of Av in the surface layer.
+            Av[:Dtop_idx,i] = (.4 * np.sqrt(topstress[i]/swdens) 
+                    *np.array(self.dz[:Dtop_idx]/self.dz[Dtop_idx-1])*d*Dtop[i])
+            # Assign linear values of Av in the bottom layer.
 
-        # Assign linear values of Av in the surface layer.
-        Av[:Dtop_idx] = (.4 * np.sqrt(topstress/swdens) 
-                *np.array(self.dz[:Dtop_idx]/self.dz[Dtop_idx-1])*d*Dtop)
-        # Assign linear values of Av in the bottom layer.
-        Av[-Dbot_idx:] = (.4 * np.sqrt(botstress/swdens)
-                *np.array(self.dz[:Dtop_idx]/self.dz[Dtop_idx-1])[::-1]*d*Dtop)
+            Av[-Dbot_idx:,i] = (.4 * np.sqrt(botstress[i]/swdens)
+                    *np.array(self.dz[:Dtop_idx]/self.dz[Dtop_idx-1])[::-1]*d*Dtop[i])
 
-        # Assign intearior values (currently constant)
-        Av[Dtop_idx:-Dbot_idx] = np.linspace(Av[Dtop_idx-1],
-                Av[-Dbot_idx],len(Av[Dtop_idx:-Dbot_idx]))
+            # Assign intearior values (currently constant)
+            Av[Dtop_idx:-Dbot_idx,i] = np.linspace(Av[Dtop_idx-1,i],
+                    Av[-Dbot_idx,i],len(Av[Dtop_idx:-Dbot_idx,i]))
+            
+            i += 1
         return Av
 
-    def Constant(self,value):
+    def constant(self,args):
         """            
         This function inputs a constant value of eddy
         viscosity in m**2/s and outputs a 1 x Nz array
         of that value."""
-        return np.array(len(self.dz)*[value])
+        value,lendata = args
+        return np.full((len(self.dz),lendata),value)
 
     def eddylist(idx):
         """
