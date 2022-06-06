@@ -54,8 +54,11 @@ class DataScrape:
         with open('text.txt','w') as fil:
             fil.write(soup.contents[0])
             fil.close()
-        return np.loadtxt('text.txt')
-    
+            
+        try:
+            return np.loadtxt('text.txt')
+        except ValueError:
+            return np.loadtxt('text.txt',dtype=object)
     
     def set_fields(self,fields=None):
         

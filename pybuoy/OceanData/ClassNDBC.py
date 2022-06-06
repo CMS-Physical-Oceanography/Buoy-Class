@@ -50,7 +50,12 @@ class NDBC(TimeSeries):
                     else:                        
                         href = scraper.layer1_search(fields=['view_text'],ext=ext)[0][0]
                         response = scraper.make_request(self.baselink,href) 
-                        data = np.concatenate((data,scraper.read_txtarry(response)))
+                        try:
+                            data = np.concatenate((data,scraper.read_txtarry(response)))
+                        except ValueError:
+                            print('Inconsistent Array Size in the link below')
+                            pass
+                            
                         print(self.baselink+href,time.time()-lap0)                        
                     i += 1     
                     
