@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 class BinPlots:
 
     
-    def plot_prof(ax,bin_):
+    def plot_prof(self,ax,bin_):
         """
         This function plots the average current 
         velocity profile in bin_ on ax. Bin is 
@@ -20,7 +20,7 @@ class BinPlots:
         
         ax.plot(np.nanmean(bin_,axis=1))
         
-    def plot_prof_bins1D(axs,bins):
+    def plot_prof_bins1D(self,bins):
         """
         This function plots a row of current 
         velocity profile bins to a row of 
@@ -31,12 +31,13 @@ class BinPlots:
         PLOTS:
             -The component row on a row of subplots."""
         
-        Ncols = np.shape(bins)[1]
+        Ncols = len(bins)
         
         fig,axs = plt.subplots(1,Ncols)
+        print(axs.shape)
         for col in range(Ncols):
             #         for row in range(Nrows):
-            self.plot_prof(axs[col],bins[col][0])
+            axs[col].plot(np.nanmean(bins[col],axis=1))
 
         return fig,axs
 
@@ -233,6 +234,6 @@ class Bins(BinPlots):
                     out[i] = np.append(out[i],month)
                 print('normal year again')
     
-        start = end
-        yr +=1
-    return out
+            start = end
+            yr +=1
+        return out
