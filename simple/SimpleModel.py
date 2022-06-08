@@ -72,7 +72,7 @@ class Simple(EddyVisc):
 
         # check if PG and WS are the same length
         if self.check == True:
-            eddydict = {'bilincut':self.bilinear_cutoff,'const':self.constant}
+            eddydict = {'bilincut':self.bilinear_cutoff,'const':self.constant,'exp':self.exp}
             self.dz = self.makegrid(self.depth,Nz)
             idx = eddydict[form]
             lendata = len(self.WS.i)
@@ -134,7 +134,7 @@ class Simple(EddyVisc):
                     arr[:,col] = np.nan
             return arr
         trace = os.getcwd()
-        os.chdir('/simple')
+        os.chdir('simple')
         csflow = replace_nans(np.loadtxt('CSflow.bin'))
         asflow = replace_nans(np.loadtxt('ASflow.bin'))
         os.chdir(trace)

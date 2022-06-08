@@ -120,6 +120,7 @@ class EddyVisc:
             i += 1
         return Av
 
+    
     def constant(self,args):
         """            
         This function inputs a constant value of eddy
@@ -127,6 +128,38 @@ class EddyVisc:
         of that value."""
         value,lendata = args
         return np.full((len(self.dz),lendata),value)
+    
+    
+    def exp(self,args):
+    
+        def linear(z,tau):
+            return .4*np.sqrt(tau/1023)*z
+        def exp(z,l):
+            return np.exp(-z/l)
+        def exp_Av(z,tau,l):
+            return linear(z,tau)*exp(z,l)
+        
+        tau = args[0]
+        EkmanScale = lambda stress : (0.4*np.sqrt(stress/1023))/coriolis(33)
+
+        h  = 30
+        Nz = 75
+        z  = np.linspace(.1,h//2,38)
+
+        Av = np.zeros((Nz,len(tau)))
+
+        idx = 0
+        for strs in tau:
+
+            EkSc = EkmanScale(strs)
+            l  = .2*EkSc
+
+            Av_ = exp_Av(z,strs,l)
+            Av[:38,idx] = Av_
+            Av[38:,idx] = Av_[::-1][1:]
+            idx += 1
+
+        return Av
 
     def eddylist(idx):
         """
