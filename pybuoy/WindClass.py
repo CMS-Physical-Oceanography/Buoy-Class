@@ -36,20 +36,20 @@ class Wind(Vector2d):
 
     def __init__(self,i=None,j=None,cd=None):
         super().__init__(i,j)
-        self.cd = self.initialize(cd)
+        self.cd = None
 
-    def initialize(self,cd):
-        """
-        This function is called in self.__init__
-        to assign the drag coefficient based on the 
-        inputted cd. Defult is cd = 1.15e-3."""
+#     def initialize(self,cd):
+#         """
+#         This function is called in self.__init__
+#         to assign the drag coefficient based on the 
+#         inputted cd. Defult is cd = 1.15e-3."""
 
-        if cd == None and np.all(self.i ==None):
-            return None
-        elif cd==None and np.all(self.i != None):
-            return np.ones(len(self.i))*1.15e-3 
-        else: 
-            return cd
+#         if self.i[0]==None:
+#             return None
+#         elif cd==None:
+#             return np.ones(len(self.i))*1.15e-3 
+#         else: 
+#             return cd
 
     def new_coordsys(self,y_displacement,cart=False):
         """
