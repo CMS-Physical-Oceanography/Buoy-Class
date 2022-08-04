@@ -35,7 +35,7 @@ class Waves(Vector2d):
 
     def __init__(self,i=None,j=None,swh=None, k=None,depth=None,cg=None,T=None):
         super().__init__(i,j)
-        self.swh,self.k,self.T,self.cg,self.depth = swh,k,T,cg,depth
+        self.swh,self.k,self.T,self.cg,self.depth,self.spec,self.fbins = swh,k,T,cg,depth,spec,fbins
 
     def new_coordsys(self,y_displacement,cart=False):
         """
