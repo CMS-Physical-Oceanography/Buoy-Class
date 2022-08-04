@@ -36,8 +36,8 @@ class Vector2d:
     ============================================================================"""       
     
     def __init__(self,i,j):
-        self.i = np.array(i)
-        self.j = np.array(j)
+        self.i = np.array(i,dtype=float)
+        self.j = np.array(j,dtype=float)
 
     def adjust(self):
         """
