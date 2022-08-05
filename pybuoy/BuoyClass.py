@@ -23,11 +23,12 @@ class Buoy(Bins):
             self.currents = Currents(None,None)
             self.depth = None
             self.lat = None
+            self.timestamps = None
         else:
             from .BuoyHelp import readBuoy
             self.wind,self.waves,self.currents,self.depth,self.lat,rotation = readBuoy(id)
             self.waves.depth,self.currents.depth = [self.depth]*2
- #             self.wind.invert()
+#             self.wind.invert()
 #             self.waves.invert()
             self.rotate_buoy(rotation)
 
@@ -58,7 +59,7 @@ class Buoy(Bins):
         if len(self.wind.i.shape) == 0 or len(self.wind.j.shape) == 0:
             print('no wind data')
         else:
-            wind = np.zeros((len(self.wind.i),2))
+            wind = np.zeros((2,len(self.wind.i)))
             wind[range(2),:] = self.wind.i,self.wind.j
             np.save(path+buoy_id+'wind.npy',wind)
             
@@ -82,8 +83,54 @@ class Buoy(Bins):
             currents[:,:,0] = self.currents.i
             currents[:,:,1] = self.currents.j
             np.save(path+buoy_id+'currents.npy',currents)
+        if type(self.timestamps)==None:
+            print('no timestamps')
+        else:
+            np.save(path+buoy_id+'times.npy',self.timestamps)
             
-    
+    def readbuoy(self,buoy_id,path=''):
+        """
+        docstring"""
+        def read_meta(buoy,data):
+            buoy.timestamps = data
+        def read_wind(buoy,data):
+            buoy.wind.i = data[0,:]
+            buoy.wind.j = data[1,:]
+        def read_bulk_waves(buoy,data):
+            data[data<0] = np.nan
+            buoy.waves.swh = data[0,:]
+            buoy.waves.T   = data[1,:]
+            buoy.waves.j   = data[2,:]
+            
+        def read_spec(buoy,spec,fbins):
+            buoy.waves.spec = spec
+            buoy.waves.fbins= fbins
+            
+        def read_currents(buoy,data):
+            buoy.currents.i = data[:,:,0]
+            buoy.currents.j = data[:,:,1]
+        try:
+            read_wind(self,np.load(path + buoy_id + 'wind.npy',allow_pickle= True))
+        except FileNotFoundError:
+            print('no wind data')
+        try:
+            read_bulk_waves(self,np.load(path+buoy_id+'waves.npy',allow_pickle=True))
+        except FileNotFoundError:
+            print('no bulk waves data')
+        try:
+            read_spec(self,np.load(path+buoy_id+'wvspec.npy',allow_pickle=True),np.load(path + buoy_id+'fbins.npy',allow_pickle=True))
+        except FileNotFoundError:
+            print('no wave spectrum data')
+        try:
+            read_currents(self,np.load(path + buoy_id+'currents.npy',allow_pickle=True))
+        except FileNotFoundError:
+            print('no currents data')
+        try:
+            read_meta(self,np.load(path+buoy_id+'times.npy',allow_pickle=True))
+        except FileNotFoundError:
+            print('no time stamps') 
+ 
+        
     def makebuoy(self):
         from .BuoyHelp import newBuoy
         newBuoy()
