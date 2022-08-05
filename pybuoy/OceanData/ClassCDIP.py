@@ -1,6 +1,7 @@
 import numpy as np
 import netCDF4 as nc
 import time
+from .datetimearr import datetime_array
 
 
 class CDIP:
@@ -54,7 +55,79 @@ class CDIP:
         
         return [data[:,i] for i in range(data.shape[1])]
         
-                    
+    def make_timestamp(self,datehr,sep='-'):
+        out = ''
+        for i in range(len(datehr)):
+            out += str(int(datehr[i])) if int(datehr[i]) >=10 else '0' + str(int(datehr[i]))
+            out += sep
+        return out[:-1]
+        
+    def make_hrly(self,data,cols,years):
+#         years = np.linspace(data[0,0],data[-1,0],int(abs(data[0,0]-data[-1,0]))+1,dtype=int)
+        out = datetime_array(years,len(cols)+1)
+        idx_map = np.array(range(len(out)))
+        
+        data[data==99]= np.nan
+        data[data==999]=np.nan
+        
+        idx = 0
+        while idx < len(data)-1:
+#             datehr = data[idx,:4]
+            timestamp = data[idx,0]
+            out_idx = idx_map[out[:,0]==timestamp][0]
+
+            def check(step):
+                try:
+                    return np.all(timestamp == data[idx+step,0])
+                except IndexError:
+                    return False 
+            step = 1
+            same_hr = check(step)
+            while same_hr == True:
+                step += 1 
+                same_hr = check(step)
+            out[out_idx,1:] =  np.nanmean(data[idx:idx+step,cols],axis=0)
+            idx += step        
+        return out
+                  
+    def make_hrly2d(self,data,years,times):
+#         years = np.linspace(data[0,0],data[-1,0],int(abs(data[0,0]-data[-1,0]))+1,dtype=int)
+        time_map = datetime_array(years,1)
+        idx_map = np.array(range(len(time_map)))
+        
+        data_shape = list(data.shape)
+        out_shape = [0 for i in range(2)]
+        out_shape[data_shape.index(max(data_shape))] = len(time_map)
+        out_shape[data_shape.index(min(data_shape))] = min(data_shape)
+        
+        out = np.full(out_shape,np.nan)
+        
+        data[data==99]= np.nan
+        data[data==999]=np.nan
+        
+        idx = 0
+        while idx < max(data_shape)-1:
+#             datehr = data[idx,:4]
+            timestamp = times[idx]
+            out_idx = idx_map[time_map[:,0]==timestamp][0]
+
+            def check(step):
+                try:
+                    return np.all(timestamp == time_map[idx+step])
+                except IndexError:
+                    return False 
+            step = 1
+            same_hr = check(step)
+            while same_hr == True:
+                step += 1 
+                same_hr = check(step)
+            if data_shape.index(max(data_shape)) == 0:
+                out[out_idx,:] =  np.nanmean(data[idx:idx+step,:],axis=0)
+            else:
+                out[:,out_idx] =  np.nanmean(data[:,idx:idx+step],axis=1)
+
+            idx += step        
+        return out
         
         
         

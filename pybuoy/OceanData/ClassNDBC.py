@@ -128,5 +128,42 @@ class NDBC(TimeSeries):
                 
 
             
-     
+    def make_hrly2d(self,data,years,times):
+#         years = np.linspace(data[0,0],data[-1,0],int(abs(data[0,0]-data[-1,0]))+1,dtype=int)
+        time_map = datetime_array(years,1)
+        idx_map = np.array(range(len(time_map)))
+        
+        data_shape = list(data.shape)
+        out_shape = [0 for i in range(2)]
+        out_shape[data_shape.index(max(data_shape))] = len(time_map)
+        out_shape[data_shape.index(min(data_shape))] = min(data_shape)
+        
+        out = np.full(out_shape,np.nan)
+        
+        data[data==99]= np.nan
+        data[data==999]=np.nan
+        
+        idx = 0
+        while idx < max(data_shape)-1:
+#             datehr = data[idx,:4]
+            timestamp = times[idx]
+            out_idx = idx_map[time_map[:,0]==timestamp][0]
+
+            def check(step):
+                try:
+                    return np.all(timestamp == time_map[idx+step])
+                except IndexError:
+                    return False 
+            step = 1
+            same_hr = check(step)
+            while same_hr == True:
+                step += 1 
+                same_hr = check(step)
+            if data_shape.index(max(data_shape)) == 0:
+                out[out_idx,:] =  np.nanmean(data[idx:idx+step,:],axis=0)
+            else:
+                out[:,out_idx] =  np.nanmean(data[:,idx:idx+step],axis=1)
+
+            idx += step        
+        return out     
                                   
