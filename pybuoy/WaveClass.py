@@ -33,7 +33,7 @@ class Waves(Vector2d):
     Add support for the full wave spectrum and include more solutions to the 
     Stokes-Drift."""
 
-    def __init__(self,i=None,j=None,swh=None, k=None,depth=None,cg=None,T=None):
+    def __init__(self,i=None,j=None,swh=None, k=None,depth=None,cg=None,T=None,spec=None,fbins=None):
         super().__init__(i,j)
         self.swh,self.k,self.T,self.cg,self.depth,self.spec,self.fbins = swh,k,T,cg,depth,spec,fbins
 
@@ -58,7 +58,7 @@ class Waves(Vector2d):
         Cg_ = lambda c,k,h :(  c*.5 * (1 + ((2*k*h)/np.sinh(2*k*h)))  )
         self.cg = Cg_(self.i,self.k,self.h)
 
-    def getk(self):
+    def getk(self,T = 0):
         """
         Uses the Newton-Raphson method to calculate the wavenumber
         k with an inital guess k0 being for shallow water waves where
@@ -73,10 +73,15 @@ class Waves(Vector2d):
         the calculated value to self.k."""
         
         # create omega and the initial guess of k defined in the doc string
-        omega = (np.pi*2)/np.array(self.T)
+        ret = True
+        
+        if type(T) == int:
+            T = self.T
+            ret = False 
+        
+        omega = (np.pi*2)/np.array(T)
         
         k = omega/np.sqrt(9.81*self.depth) # make sure depth is set if error is thrown here 
-    
         # create initial values using k0
         f = (9.81 * k * np.tanh(k*self.depth)) - omega**2 
         dfdk = 9.81*self.depth*k*( 1/(np.cosh(k*self.depth)**2) ) + (9.81*np.tanh(k*self.depth))
@@ -87,9 +92,12 @@ class Waves(Vector2d):
             k = k - (f/dfdk)
             f = (9.81*k*np.tanh(k*self.depth)) - omega**2
             dfdk = 9.81*self.depth*k*( 1/(np.cosh(k*self.depth)**2) ) + (9.81 * np.tanh(k*self.depth))
-            ii = np.any(abs(f) > 1e-10)
+            ii = np.any(abs(f) > 1e-6)
             
-        self.k = k
+        if ret == True:
+            return k
+        else:
+            self.k = k
      
     def stokesdrift(self,res=None):
 
@@ -160,3 +168,69 @@ class Waves(Vector2d):
         traj = np.deg2rad(self.j)
         
         return(Vector2d((Hsig**2)*np.sin(traj),(Hsig**2)*np.cos(traj)))
+    
+    def spectral_swh(self):
+        
+        df = np.zeros_like(self.spec)
+        
+        df_1d = np.zeros_like(self.fbins)
+        df_1d[:-1] = self.fbins[1:] - self.fbins[:-1]
+        df_1d[-1] = df_1d[-2]
+        t_axis = list(self.spec.shape).index(max(self.spec.shape))
+        
+        for i in range(max(self.spec.shape)):
+
+            if t_axis == 0:
+                df[i,:] = df_1d
+            else:
+                df[:,i] = df_1d
+        m0 = np.nansum(self.spec*df,axis=list(self.spec.shape).index(min(self.spec.shape)))
+       
+        m0[m0==0] = np.nan
+        return 4*np.sqrt(m0)
+    
+    def spectral_Tpeak(self):
+
+        out = np.zeros(self.spec.shape[0])
+
+
+
+        for i in range(self.spec.shape[0]):
+
+            peak = np.nanmax(self.spec[:,i])
+
+            out[i] = 1/self.fbins[self.spec[:,i]==peak][0] if np.isnan(peak)==False else np.nan
+
+        return out
+
+    def bottom_velocity(self,h):
+        """
+        docstring"""
+        self.depth = h
+
+        df_1d = np.zeros_like(self.fbins)
+        df_1d[:-1] = self.fbins[1:] - self.fbins[:-1]
+        df_1d[-1] = df_1d[-2]
+        f_1d = self.fbins+df_1d
+        k_1d = self.getk(1/f_1d)
+        df,k,f = [np.zeros_like(self.spec) for i in range(3)]
+        t_axis = list(self.spec.shape).index(max(self.spec.shape))
+
+        for i in range(max(self.spec.shape)):
+
+            if t_axis == 0:
+                f[i,:]  = f_1d
+                k[i,:]  = k_1d
+                df[i,:] = df_1d
+            else:
+                f[:,i]  = f_1d
+                k[:,i]  = k_1d
+                df[:,i] = df_1d
+        
+        ax = list(self.spec.shape).index(min(self.spec.shape))
+
+        u_br = np.sqrt(2)*np.sqrt(np.nansum(4*np.pi**2*self.spec*df/((1/f)**2*(np.sinh(k*h)**2)),
+                                  axis=ax))
+        u_br[u_br==0] = np.nan
+        T_br = 1/(np.nansum(f*df*self.spec,axis=ax)/np.nansum(df*self.spec,axis=ax))
+        return u_br,T_br
