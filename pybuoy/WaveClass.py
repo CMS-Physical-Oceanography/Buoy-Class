@@ -234,3 +234,27 @@ class Waves(Vector2d):
         u_br[u_br==0] = np.nan
         T_br = 1/(np.nansum(f*df*self.spec,axis=ax)/np.nansum(df*self.spec,axis=ax))
         return u_br,T_br
+    
+    def bottom_friction(self,u_b,T_b,K_N):
+        
+        friction = np.zeros_like(u_b)
+        xi=np.zeros_like(u_b)
+        for i in range(len(u_b)):
+
+            xi_scale = (u_b[i]*T_b[i])/K_N
+            xi[i] = xi_scale
+            if .2 < xi_scale < 100:
+                friction[i] = np.exp((7.02*xi_scale**-.078) - 8.82)
+            elif 100 < xi_scale < 10000:
+                friction[i] = np.exp((5.61*xi_scale**-.109) - 7.3)
+            else:
+                friction[i] = np.nan
+        return friction
+    
+    def bottom_stress(self,h,K_N,rho=1025):
+    
+        u_b,T_b = self.bottom_velocity(h)
+        
+        f_w = self.bottom_friction(u_b,T_b,K_N)
+
+        return rho*f_w*(u_b**2),u_b,T_b
