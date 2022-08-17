@@ -28,8 +28,6 @@ class Buoy(Bins):
             from .BuoyHelp import readBuoy
             self.wind,self.waves,self.currents,self.depth,self.lat,rotation = readBuoy(id)
             self.waves.depth,self.currents.depth = [self.depth]*2
-#             self.wind.invert()
-#             self.waves.invert()
             self.rotate_buoy(rotation)
 
     def rotate_buoy(self,y_displacement):
@@ -51,6 +49,7 @@ class Buoy(Bins):
         self.wind.new_coordsys(y_displacement,cart=False)
         self.waves.new_coordsys(y_displacement,cart=False)
         self.currents.new_coordsys(y_displacement,cart=True)
+
         
     def savebuoy(self,buoy_id,path=''):
         """
@@ -129,9 +128,30 @@ class Buoy(Bins):
             read_meta(self,np.load(path+buoy_id+'times.npy',allow_pickle=True))
         except FileNotFoundError:
             print('no time stamps') 
- 
+
         
-    def makebuoy(self):
-        from .BuoyHelp import newBuoy
-        newBuoy()
+    def timeslice(self,start,end):
+
+        idx_map = np.array(range(len(self.timestamps)))
+        start_idx = idx_map[self.timestamps==start][0]
+        end_idx = idx_map[self.timestamps==end][0] +1
+
+        try:
+            self.wind.i = self.wind.i[start_idx:end_idx]
+            self.wind.j = self.wind.i[start_idx:end_idx]
+        except IndexError:
+            pass
+        try:
+            self.waves.j = self.waves.j[start_idx:end_idx]
+            self.waves.swh = self.waves.swh[start_idx:end_idx]
+            self.waves.T = self.waves.T[start_idx:end_idx]
+
+            t_ax = list(self.waves.spec.shape).index(max(self.waves.spec.shape))
+            if t_ax==0:
+                self.waves.spec = self.waves.spec[start_idx:end_idx,:]
+            else:
+                self.waves.spec = self.waves.spec[:,start_idx:end_idx]
+        except IndexError:
+            pass
+        self.timestamps = self.timestamps[start_idx:end_idx]
 
