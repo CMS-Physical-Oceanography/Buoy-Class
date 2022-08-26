@@ -1,7 +1,8 @@
 import numpy as np
 from .WindClass    import Wind 
 from .WaveClass    import Waves
-from .CurrentClass import Currents 
+from .CurrentClass import Currents
+from .ClimateClass import Climate
 from .BinClass     import Bins
 from .OceanData    import NDBC,CORMP
 
@@ -21,6 +22,7 @@ class Buoy(Bins):
             self.wind = Wind(None,None)
             self.waves = Waves(None,None)
             self.currents = Currents(None,None)
+            self.climate  = Climate()
             self.depth = None
             self.lat = None
             self.timestamps = None
@@ -62,6 +64,12 @@ class Buoy(Bins):
             wind[range(2),:] = self.wind.i,self.wind.j
             np.save(path+buoy_id+'wind.npy',wind)
             
+        cli_data = self.climate.cat_data()
+        if np.all(cli_data == 0):
+            print('no climate data')
+        else:
+            np.save(path+buoy_id+'climate.npy',cli_data) 
+
         if len(self.waves.T.shape) == 0 or len(self.waves.j.shape) == 0 or len(self.waves.swh.shape) == 0:
             print('no wave data')
         else:
@@ -108,6 +116,18 @@ class Buoy(Bins):
         def read_currents(buoy,data):
             buoy.currents.i = data[:,:,0]
             buoy.currents.j = data[:,:,1]
+            
+        def read_climate(buoy,data):          
+            buoy.climate.sst         = data[:,0]
+            buoy.climate.bottom_temp = data[:,1]
+            buoy.climate.atm_pressure= data[:,2]
+            buoy.climate.air_temp    = data[:,3]
+            
+
+        try:
+            read_climate(self,np.load(path+buoy_id+'climate.npy',allow_pickle=True))
+        except FileNotFoundError:
+            print('no climate data')    
         try:
             read_wind(self,np.load(path + buoy_id + 'wind.npy',allow_pickle= True))
         except FileNotFoundError:
@@ -128,7 +148,40 @@ class Buoy(Bins):
             read_meta(self,np.load(path+buoy_id+'times.npy',allow_pickle=True))
         except FileNotFoundError:
             print('no time stamps') 
+            
+    def filter_currents(self,cut_freq,N):
+        """
+        docstring"""
+        from pandas import DataFrame
+        from scipy.signal import butter,filtfilt
 
+        A,B = butter(N,cut_freq)
+        out_i,out_j = [np.zeros_like(self.currents.i) for i in range(2)]
+        nan_idxs = np.zeros_like(self.currents.i,dtype=bool)
+        dims = self.currents.i.shape
+        idx_map = np.array(range(max(dims)),dtype=int)
+
+        for i in range(min(dims)):
+            if np.all(np.isnan(self.currents.i[i,:])):
+                pass
+            else:
+                start_idx = 0
+                check = np.isnan(self.currents.i[i,:][start_idx])
+                while check:
+                    start_idx += 1
+                    check = np.isnan(self.currents.i[i,:][start_idx])
+
+                nan_idxs[i,:] = np.isnan(self.currents.i[i,:])
+                interp_i = np.array(DataFrame(self.currents.i[i,start_idx:]).interpolate())[:,0]
+                interp_j = np.array(DataFrame(self.currents.j[i,start_idx:]).interpolate())[:,0]
+                filt_i = filtfilt(A,B,interp_i)
+                filt_j = filtfilt(A,B,interp_j)
+
+                self.currents.i[i,start_idx:] = filt_i
+                self.currents.j[i,start_idx:] = filt_j
+
+        self.currents.i[nan_idxs] = np.nan
+        self.currents.j[nan_idxs] = np.nan
         
     def timeslice(self,start,end):
 
