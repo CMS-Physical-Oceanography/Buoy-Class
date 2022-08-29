@@ -222,4 +222,54 @@ def wndstorm_table(buoy,thresh,dur,end_thresh,end_dur,wvbuoy,Nstorms=15,storm_na
     table = pd.DataFrame(table_arr[:Nstorms])
     table.columns = header
     table.index = range(1,Nstorms+1)
-    return table
+    return table,wnd_storms
+
+def warner_class(buoy,storms,air_temp,atm_pres,low_thresh):
+    
+    def avg_angles(angles,storm):
+        traj = np.deg2rad(angles[storm[0]:storm[1]])
+
+        x = np.nanmean(np.cos(traj))
+        y = np.nanmean(np.sin(traj))
+        ang = np.rad2deg(np.arctan2(y,x))
+        
+        return ang if ang >=0 else 360 +ang
+    
+    def check_wnddir(dir_data,storm,low_idx=None,window=28):  
+        if low_idx is None:
+            start_mwd = avg_angles(buoy.wind.j,[strm[0],(strm[1]-strm[0])//2])
+            end_mwd = avg_angles(buoy.wind.j,[(strm[1]-strm[0])//2,strm[1]])
+        else:
+            start_mwd = avg_angles(buoy.wind.j,[low_idx-window,low_idx])
+            end_mwd = avg_angles(buoy.wind.j,[low_idx,low_idx+window])
+
+        if start_mwd > 315 or start_mwd < 90:
+            return 'low press'
+        else:
+            if end_mwd < 315 and end_mwd > 90:    
+                return 'warm'
+            else:
+                return 'cold'        
+            
+    def check_temp(low_idx,t_data,storm,window=48):
+        
+        pre_grad = np.gradient(t_data[low_idx-window:low_idx])
+        post_grad = np.gradient(t_data[low_idx:low_idx+window])
+    
+        if np.nanmean(pre_grad) > 0 and np.nanmean(post_grad) < 0:
+            return 'cold'
+        else:
+            return check_wnddir(buoy.wind.j,storm,low_idx=low_idx,window=window)
+            
+    idx_map = np.array(range(len(atm_pres)),dtype=int)
+    classes = []
+    for strm in storms:
+        min_prs = np.nanmin(atm_pres[strm[0]:strm[1]])
+       
+        if min_prs < low_thresh:
+            low_idx = list(atm_pres[strm[0]:strm[1]]).index(min_prs) + idx_map[strm[0]]
+            classes.append(check_temp(low_idx,air_temp,strm))
+        else:
+            classes.append(check_wnddir(buoy.wind.j,strm))
+
+    return classes            

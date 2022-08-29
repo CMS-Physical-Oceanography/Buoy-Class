@@ -34,7 +34,7 @@ class Wind(Vector2d):
     could be done by adapting the full wind stress function in the Python 
     air-sea toolbox (GitHub link in self.windstress())."""
 
-    def __init__(self,i=None,j=None,cd=None):
+    def __init__(self,i=None,j=None):
         super().__init__(i,j)
         self.cd = None
 
@@ -113,7 +113,7 @@ class Wind(Vector2d):
              wind stress if real = True (defult). 
              If real = False, this returns an array of complex vectors 
              u+sqrt(-1)*v."""
-
+        
         drag = self.cd
 
         if cart == True: # if self.i,self.j = u,v
@@ -141,10 +141,21 @@ class Wind(Vector2d):
             -self in polar coordinates.
         RETURNS:
             -Vector2d object with self.i,self.j = u transport,v transport."""
-    
         wstrs = self.windstress()
         cor = coriolis(lat)
         Uekx = wstrs.j /(swdens*cor)
-        Ueky = wstrs.i / (swdens*cor)
-
+        Ueky = wstrs.i / (swdens*cor)       
+        
         return Vector2d(Uekx,Ueky)
+    
+    def lpf_wnd(self,cut_freq,order):
+
+        from filters import filter_comps
+
+        A,B = butter(order,cut_freq)
+
+        raw_data = np.zeros((len(self.i),2))
+        raw_data[:,0] = self.wind.j
+        raw_data[:,1] = self.wind.i
+
+        self.i,self.j = filter_comps(raw_data,A,B)
