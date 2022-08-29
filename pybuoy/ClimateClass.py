@@ -5,10 +5,7 @@ class Climate:
     
     def __init__(self):
         
-        self.sst          = None
-        self.bottom_temp  = None
-        self.atm_pressure = None
-        self.air_temp     = None
+        self.sst,self.bottom_temp,self.atm_pressure,self.air_temp = [None for i in range(4)]
 
     def cat_data(self):
         """
