@@ -150,12 +150,12 @@ class Wind(Vector2d):
     
     def lpf_wnd(self,cut_freq,order):
 
-        from filters import filter_comps
-
+        from .filters import filter_comps
+        from scipy.signal import butter
         A,B = butter(order,cut_freq)
 
         raw_data = np.zeros((len(self.i),2))
-        raw_data[:,0] = self.wind.j
-        raw_data[:,1] = self.wind.i
+        raw_data[:,0] = self.j
+        raw_data[:,1] = self.i
 
         self.i,self.j = filter_comps(raw_data,A,B)

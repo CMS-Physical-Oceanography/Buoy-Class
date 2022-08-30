@@ -1,5 +1,5 @@
 import numpy as np
-from pandas import DataFrame
+import pandas as pd
 from scipy.signal import butter,filtfilt
 
 def filter_1d(data,cut_freq,N,btype='lowpass'):
@@ -11,7 +11,7 @@ def filter_1d(data,cut_freq,N,btype='lowpass'):
     while is_nan:
         start_idx +=1
         is_nan = True if np.isnan(data[start_idx])==True else False
-    interp = np.array(DataFrame(data[start_idx:]).interpolate())[:,0]
+    interp = np.array(pd.DataFrame(data[start_idx:]).interpolate())[:,0]
     filt = filtfilt(A,B,interp,axis=0)
     out[start_idx:] = filt
     out[nan_idxs] = np.nan
